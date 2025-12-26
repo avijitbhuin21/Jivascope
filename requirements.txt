@@ -27,3 +27,6 @@ tensorboard>=2.13.0
 
 # Testing
 pytest>=8.0.0
+
+# System Detection
+psutil>=5.9.0
