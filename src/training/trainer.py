@@ -285,6 +285,8 @@ class Trainer:
         print(f"{'='*60}\n")
         
         start_time = time.time()
+        validation_interval = 5
+        last_val_metrics = None
         
         for epoch in range(num_epochs):
             self.current_epoch = epoch
@@ -292,33 +294,48 @@ class Trainer:
             
             train_metrics = self.train_epoch()
             
-            val_metrics = self.validate()
+            should_validate = (epoch + 1) % validation_interval == 0 or epoch == num_epochs - 1
+            
+            if should_validate:
+                val_metrics = self.validate()
+                last_val_metrics = val_metrics
+            else:
+                val_metrics = last_val_metrics
             
             self.scheduler.step()
             
             current_lr = self.optimizer.param_groups[0]['lr']
             
             history['train_loss'].append(train_metrics['loss'])
-            history['val_loss'].append(val_metrics['loss'])
-            history['train_murmur_acc'].append(train_metrics['murmur_accuracy'])
-            history['val_murmur_acc'].append(val_metrics['murmur_accuracy'])
-            history['train_outcome_acc'].append(train_metrics['outcome_accuracy'])
-            history['val_outcome_acc'].append(val_metrics['outcome_accuracy'])
             history['learning_rates'].append(current_lr)
             
-            self._log_epoch(epoch, train_metrics, val_metrics, current_lr)
+            if should_validate and val_metrics:
+                history['val_loss'].append(val_metrics['loss'])
+                history['train_murmur_acc'].append(train_metrics['murmur_accuracy'])
+                history['val_murmur_acc'].append(val_metrics['murmur_accuracy'])
+                history['train_outcome_acc'].append(train_metrics['outcome_accuracy'])
+                history['val_outcome_acc'].append(val_metrics['outcome_accuracy'])
+                
+                self._log_epoch(epoch, train_metrics, val_metrics, current_lr)
             
             epoch_time = time.time() - epoch_start
-            self._print_epoch_summary(epoch, num_epochs, train_metrics, val_metrics, epoch_time)
             
-            if val_metrics['loss'] < self.best_val_loss:
-                self.best_val_loss = val_metrics['loss']
-                self.save_checkpoint('best_model.pt', val_metrics)
-                print(f"  💾 New best model saved! (val_loss: {val_metrics['loss']:.4f})")
-            
-            if self.early_stopping(val_metrics['loss']):
-                print(f"\n⚠️ Early stopping triggered at epoch {epoch + 1}")
-                break
+            if should_validate and val_metrics:
+                self._print_epoch_summary(epoch, num_epochs, train_metrics, val_metrics, epoch_time)
+                
+                if val_metrics['loss'] < self.best_val_loss:
+                    self.best_val_loss = val_metrics['loss']
+                    self.save_checkpoint('best_model.pt', val_metrics)
+                    print(f"  💾 New best model saved! (val_loss: {val_metrics['loss']:.4f})")
+                
+                if self.early_stopping(val_metrics['loss']):
+                    print(f"\n⚠️ Early stopping triggered at epoch {epoch + 1}")
+                    break
+            else:
+                print(f"\nEpoch {epoch + 1}/{num_epochs} ({epoch_time:.1f}s)")
+                print(f"  Train - Loss: {train_metrics['loss']:.4f} | "
+                      f"Murmur Acc: {train_metrics['murmur_accuracy']:.4f} | "
+                      f"Outcome Acc: {train_metrics['outcome_accuracy']:.4f}")
         
         total_time = time.time() - start_time
         print(f"\n{'='*60}")
@@ -326,7 +343,7 @@ class Trainer:
         print(f"Best validation loss: {self.best_val_loss:.4f}")
         print(f"{'='*60}\n")
         
-        self.save_checkpoint('final_model.pt', val_metrics)
+        self.save_checkpoint('final_model.pt', last_val_metrics or train_metrics)
         self.writer.close()
         
         return history
@@ -400,13 +417,18 @@ class Trainer:
         Load model checkpoint.
         
         Args:
-            filename: Checkpoint filename
+            filename: Checkpoint filename or full path
         
         Returns:
             Checkpoint dictionary
         """
         path = self.checkpoint_dir / filename
-        checkpoint = torch.load(path, map_location=self.device)
+        if not path.exists():
+            path = Path(filename)
+        if not path.exists():
+            raise FileNotFoundError(f"Checkpoint not found: {filename}")
+        
+        checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -414,6 +436,9 @@ class Trainer:
         self.current_epoch = checkpoint['epoch']
         self.best_val_loss = checkpoint['best_val_loss']
         self.global_step = checkpoint['global_step']
+        
+        print(f"  ✅ Loaded checkpoint from epoch {checkpoint['epoch'] + 1}")
+        print(f"     Best val_loss: {checkpoint['best_val_loss']:.4f}")
         
         return checkpoint
 

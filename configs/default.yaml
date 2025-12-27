@@ -10,8 +10,8 @@ training:
   early_stopping_patience: 10
   warmup_epochs: 5
   label_smoothing: 0.1
-  murmur_loss_weight: 0.6
-  outcome_loss_weight: 0.4
+  murmur_loss_weight: 0.4
+  outcome_loss_weight: 0.6
 
 # Optimizer configuration
 optimizer:
