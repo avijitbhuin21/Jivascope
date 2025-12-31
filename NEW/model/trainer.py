@@ -204,11 +204,22 @@ class Trainer:
             torch.save(checkpoint, best_acc_path)
     
     def train(self, epochs: Optional[int] = None) -> Dict:
+        import time
+        
         epochs = epochs or self.config.get('epochs', 100)
+        save_every = self.config.get('save_every', 5)
+        
+        start_time = time.time()
+        epoch_times = []
         
         for epoch in range(epochs):
+            epoch_start = time.time()
+            
             train_loss, train_acc = self.train_epoch()
             val_metrics = self.validate()
+            
+            epoch_time = time.time() - epoch_start
+            epoch_times.append(epoch_time)
             
             if isinstance(self.scheduler, CosineAnnealingLR):
                 self.scheduler.step()
@@ -230,7 +241,12 @@ class Trainer:
             self.history['val_f1'].append(val_metrics['murmur_f1'])
             self.history['val_auc'].append(val_metrics['murmur_auc'])
             
-            print(f"Epoch {epoch+1}/{epochs}")
+            avg_epoch_time = np.mean(epoch_times)
+            remaining_epochs = epochs - (epoch + 1)
+            eta_seconds = avg_epoch_time * remaining_epochs
+            eta_minutes = eta_seconds / 60
+            
+            print(f"Epoch {epoch+1}/{epochs} ({epoch_time:.1f}s, ETA: {eta_minutes:.1f}min)")
             print(f"  Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
             print(f"  Val Loss: {val_metrics['loss']:.4f}, Val Acc: {val_metrics['accuracy']:.4f}")
             print(f"  Murmur - P: {val_metrics['murmur_precision']:.4f}, R: {val_metrics['murmur_recall']:.4f}, F1: {val_metrics['murmur_f1']:.4f}, AUC: {val_metrics['murmur_auc']:.4f}")
@@ -242,13 +258,28 @@ class Trainer:
                 if is_best_acc:
                     print(f"  ✓ New best accuracy model saved! ({val_metrics['accuracy']:.4f}) (best_acc_model.pt)")
             
+            if (epoch + 1) % save_every == 0:
+                periodic_path = os.path.join(self.checkpoint_dir, f'checkpoint_epoch_{epoch+1}.pt')
+                checkpoint = {
+                    'epoch': epoch,
+                    'model_state_dict': self.model.state_dict(),
+                    'optimizer_state_dict': self.optimizer.state_dict(),
+                    'val_loss': val_metrics['loss'],
+                    'val_accuracy': val_metrics['accuracy'],
+                    'config': self.config
+                }
+                torch.save(checkpoint, periodic_path)
+                print(f"  📁 Periodic checkpoint saved (epoch {epoch+1})")
+            
             if self.early_stopping(val_metrics['loss']):
                 print(f"\nEarly stopping triggered after {epoch+1} epochs")
                 break
         
+        total_time = time.time() - start_time
         print(f"\nTraining complete!")
+        print(f"  Total time: {total_time/60:.1f} minutes")
+        print(f"  Avg epoch time: {np.mean(epoch_times):.1f}s")
         print(f"  Best Val Loss: {self.best_val_loss:.4f}")
         print(f"  Best Val Accuracy: {self.best_val_acc:.4f}")
         
         return self.history
-
