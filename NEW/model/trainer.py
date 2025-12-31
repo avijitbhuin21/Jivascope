@@ -101,6 +101,7 @@ class Trainer:
             'val_auc': []
         }
         self.best_val_loss = float('inf')
+        self.best_val_acc = 0.0
     
     def train_epoch(self) -> Tuple[float, float]:
         self.model.train()
@@ -181,21 +182,26 @@ class Trainer:
         
         return metrics
     
-    def save_checkpoint(self, epoch: int, val_loss: float, is_best: bool = False):
+    def save_checkpoint(self, epoch: int, val_metrics: Dict, is_best_loss: bool = False, is_best_acc: bool = False):
         checkpoint = {
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
-            'val_loss': val_loss,
+            'val_loss': val_metrics['loss'],
+            'val_accuracy': val_metrics['accuracy'],
             'config': self.config
         }
         
         path = os.path.join(self.checkpoint_dir, f'checkpoint_epoch_{epoch}.pt')
         torch.save(checkpoint, path)
         
-        if is_best:
+        if is_best_loss:
             best_path = os.path.join(self.checkpoint_dir, 'best_model.pt')
             torch.save(checkpoint, best_path)
+        
+        if is_best_acc:
+            best_acc_path = os.path.join(self.checkpoint_dir, 'best_acc_model.pt')
+            torch.save(checkpoint, best_acc_path)
     
     def train(self, epochs: Optional[int] = None) -> Dict:
         epochs = epochs or self.config.get('epochs', 100)
@@ -209,9 +215,13 @@ class Trainer:
             else:
                 self.scheduler.step(val_metrics['loss'])
             
-            is_best = val_metrics['loss'] < self.best_val_loss
-            if is_best:
+            is_best_loss = val_metrics['loss'] < self.best_val_loss
+            is_best_acc = val_metrics['accuracy'] > self.best_val_acc
+            
+            if is_best_loss:
                 self.best_val_loss = val_metrics['loss']
+            if is_best_acc:
+                self.best_val_acc = val_metrics['accuracy']
             
             self.history['train_loss'].append(train_loss)
             self.history['val_loss'].append(val_metrics['loss'])
@@ -225,12 +235,20 @@ class Trainer:
             print(f"  Val Loss: {val_metrics['loss']:.4f}, Val Acc: {val_metrics['accuracy']:.4f}")
             print(f"  Murmur - P: {val_metrics['murmur_precision']:.4f}, R: {val_metrics['murmur_recall']:.4f}, F1: {val_metrics['murmur_f1']:.4f}, AUC: {val_metrics['murmur_auc']:.4f}")
             
-            if is_best:
-                self.save_checkpoint(epoch, val_metrics['loss'], is_best=True)
-                print("  ✓ New best model saved!")
+            if is_best_loss or is_best_acc:
+                self.save_checkpoint(epoch, val_metrics, is_best_loss=is_best_loss, is_best_acc=is_best_acc)
+                if is_best_loss:
+                    print("  ✓ New best loss model saved! (best_model.pt)")
+                if is_best_acc:
+                    print(f"  ✓ New best accuracy model saved! ({val_metrics['accuracy']:.4f}) (best_acc_model.pt)")
             
             if self.early_stopping(val_metrics['loss']):
                 print(f"\nEarly stopping triggered after {epoch+1} epochs")
                 break
         
+        print(f"\nTraining complete!")
+        print(f"  Best Val Loss: {self.best_val_loss:.4f}")
+        print(f"  Best Val Accuracy: {self.best_val_acc:.4f}")
+        
         return self.history
+
