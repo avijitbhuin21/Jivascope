@@ -48,17 +48,16 @@ class HeartSoundDataset(Dataset):
         
         for idx, row in self.df.iterrows():
             patient_id = str(row['Patient ID'])
-            murmur_label = int(row['Murmur_Label'])
+            outcome_label = int(row['Outcome_Label'])
             
-            wav_files = [f for f in os.listdir(self.data_dir) 
-                        if f.startswith(f"{patient_id}_") and f.endswith('.wav')]
+            wav_file = f"{patient_id}.wav"
+            file_path = os.path.join(self.data_dir, wav_file)
             
-            for wav_file in wav_files:
+            if os.path.exists(file_path):
                 samples.append({
                     'patient_id': patient_id,
-                    'file_path': os.path.join(self.data_dir, wav_file),
-                    'valve': wav_file.replace(f"{patient_id}_", "").replace(".wav", ""),
-                    'murmur_label': murmur_label,
+                    'file_path': file_path,
+                    'outcome_label': outcome_label,
                     'heart_sound_label': 1
                 })
         
@@ -84,7 +83,7 @@ class HeartSoundDataset(Dataset):
         features = extract_features_from_array(audio, apply_filter=False)
         
         labels = torch.tensor(
-            [sample['heart_sound_label'], sample['murmur_label']],
+            [sample['heart_sound_label'], sample['outcome_label']],
             dtype=torch.float32
         )
         
@@ -115,15 +114,13 @@ class HeartSoundDatasetPatientLevel(Dataset):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, int]:
         row = self.df.iloc[idx]
         patient_id = str(row['Patient ID'])
-        murmur_label = int(row['Murmur_Label'])
+        outcome_label = int(row['Outcome_Label'])
         
-        wav_files = [f for f in os.listdir(self.data_dir) 
-                    if f.startswith(f"{patient_id}_") and f.endswith('.wav')]
+        wav_file = f"{patient_id}.wav"
+        file_path = os.path.join(self.data_dir, wav_file)
         
         features_list = []
-        for wav_file in wav_files[:self.max_valves]:
-            file_path = os.path.join(self.data_dir, wav_file)
-            
+        if os.path.exists(file_path):
             audio = load_audio(file_path, SAMPLE_RATE)
             
             if self.augmentation is not None:
@@ -133,13 +130,16 @@ class HeartSoundDatasetPatientLevel(Dataset):
             features_list.append(features)
         
         while len(features_list) < self.max_valves:
-            features_list.append(torch.zeros_like(features_list[0]))
+            if features_list:
+                features_list.append(torch.zeros_like(features_list[0]))
+            else:
+                features_list.append(torch.zeros(128, 1))
         
         stacked_features = torch.stack(features_list)
         
-        labels = torch.tensor([1, murmur_label], dtype=torch.float32)
+        labels = torch.tensor([1, outcome_label], dtype=torch.float32)
         
-        return stacked_features, labels, len(wav_files)
+        return stacked_features, labels, 1
 
 
 def create_dataloaders(

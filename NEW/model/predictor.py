@@ -22,7 +22,7 @@ class HeartSoundPredictor:
         self.model.eval()
     
     def _load_model(self, path: str) -> LightCardiacNet:
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=False)
         
         config = checkpoint.get('config', {})
         model = create_model(

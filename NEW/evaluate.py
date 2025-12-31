@@ -29,7 +29,7 @@ from torch.utils.data import DataLoader
 
 def evaluate_model(model_path: str, test_csv: str, test_dir: str, device: str = 'cpu'):
     print("Loading model...")
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     config = checkpoint.get('config', {})
     
     model = create_model(

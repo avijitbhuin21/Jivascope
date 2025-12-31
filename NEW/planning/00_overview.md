@@ -11,34 +11,34 @@ An AI-powered heart sound classification system using **LightCardiacNet** archit
 ### Model Summary
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         LIGHTCARDIACNET ARCHITECTURE                         │
+│                        LIGHTCARDIACNET ARCHITECTURE                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
+│                                                                             │
 │  AUDIO INPUT (.wav) ──► MFCC Features ──► [Bi-GRU + Attention] ──► OUTPUT   │
-│                                                                              │
+│                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                        ENSEMBLE STRUCTURE                             │   │
-│  │                                                                       │   │
+│  │                        ENSEMBLE STRUCTURE                            │   │
+│  │                                                                      │   │
 │  │   ┌─────────────────────┐         ┌─────────────────────┐            │   │
 │  │   │  Bi-GRU Network 1   │         │  Bi-GRU Network 2   │            │   │
 │  │   │  + Attention Layer  │         │  + Attention Layer  │            │   │
 │  │   │  (Pruned/Sparse)    │         │  (Pruned/Sparse)    │            │   │
 │  │   └──────────┬──────────┘         └──────────┬──────────┘            │   │
-│  │              │                               │                        │   │
-│  │              └───────────┬───────────────────┘                        │   │
-│  │                          │                                            │   │
-│  │                 [Weighted Average Fusion]                             │   │
-│  │                          │                                            │   │
-│  │                          ▼                                            │   │
-│  │              ┌───────────────────────┐                                │   │
-│  │              │   Final Prediction    │                                │   │
-│  │              │ heart_sound: bool     │                                │   │
-│  │              │ murmur: bool          │                                │   │
-│  │              └───────────────────────┘                                │   │
+│  │              │                               │                       │   │
+│  │              └───────────┬───────────────────┘                       │   │
+│  │                          │                                           │   │
+│  │                 [Weighted Average Fusion]                            │   │
+│  │                          │                                           │   │
+│  │                          ▼                                           │   │
+│  │              ┌───────────────────────┐                               │   │
+│  │              │   Final Prediction    │                               │   │
+│  │              │ heart_sound: bool     │                               │   │
+│  │              │ murmur: bool          │                               │   │
+│  │              └───────────────────────┘                               │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
-│                                                                              │
+│                                                                             │
 │  Performance: 98.5% accuracy | 18ms inference | Lightweight (~sparse)       │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
