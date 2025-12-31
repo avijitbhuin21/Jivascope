@@ -7,7 +7,7 @@ Handles loading audio files and extracting features for training.
 import os
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from typing import Optional, Tuple, List
 import numpy as np
 
@@ -149,7 +149,8 @@ def create_dataloaders(
     val_dir: str,
     batch_size: int = 32,
     num_workers: int = 4,
-    augment_train: bool = True
+    augment_train: bool = True,
+    use_balanced_sampling: bool = True
 ) -> Tuple[DataLoader, DataLoader]:
     train_dataset = HeartSoundDataset(
         train_csv, train_dir, augment=augment_train
@@ -158,10 +159,27 @@ def create_dataloaders(
         val_csv, val_dir, augment=False
     )
     
+    sampler = None
+    shuffle = True
+    
+    if use_balanced_sampling:
+        labels = [sample['outcome_label'] for sample in train_dataset.samples]
+        class_counts = np.bincount(labels)
+        class_weights = 1.0 / class_counts
+        sample_weights = [class_weights[label] for label in labels]
+        sampler = WeightedRandomSampler(
+            weights=sample_weights,
+            num_samples=len(sample_weights),
+            replacement=True
+        )
+        shuffle = False
+        print(f"Using balanced sampling: {class_counts[0]} Normal, {class_counts[1]} Abnormal")
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=shuffle,
+        sampler=sampler,
         num_workers=num_workers,
         pin_memory=True
     )

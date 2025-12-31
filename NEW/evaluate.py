@@ -114,7 +114,7 @@ def evaluate_model(model_path: str, test_csv: str, test_dir: str, device: str = 
 
 def main():
     parser = argparse.ArgumentParser(description='Evaluate LightCardiacNet')
-    parser.add_argument('--model', type=str, default='model/checkpoints/best_model.pt')
+    parser.add_argument('--model', type=str, default='model/checkpoints/best_acc_model.pt')
     parser.add_argument('--test-csv', type=str, default='cleaned_data_entries/test.csv')
     parser.add_argument('--test-dir', type=str, default='cleaned_data/test')
     parser.add_argument('--device', type=str, default='cpu')

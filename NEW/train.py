@@ -161,9 +161,9 @@ def main():
     print()
     
     criterion = create_loss_function(
-        loss_type='weighted_bce',
+        loss_type='focal',
         pos_weight_heart=1.0,
-        pos_weight_murmur=2.5
+        pos_weight_murmur=3.5
     )
     
     trainer = Trainer(
