@@ -52,6 +52,9 @@ checkpoints/*.ckpt
 *.pth
 *.ckpt
 
+# Exception: Keep LightCardiacNet model (11MB)
+!website/model/lightcardiacnet.pt
+
 # Logs
 logs/
 *.log

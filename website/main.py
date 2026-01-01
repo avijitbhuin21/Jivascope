@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Form, HTTPException, status, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -22,6 +22,19 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 VALID_USERNAME = os.getenv("APP_USERNAME", "admin")
 VALID_PASSWORD = os.getenv("APP_PASSWORD", "password123")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Load model on server startup."""
+    from predictor import predictor
+    print("=" * 50)
+    print("JIVASCOPE SERVER STARTING")
+    print("=" * 50)
+    predictor.load_model()
+    print("=" * 50)
+    print("SERVER READY TO ACCEPT REQUESTS")
+    print("=" * 50)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -63,3 +76,37 @@ async def dashboard(request: Request):
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+
+
+@app.post("/api/analyze")
+async def analyze_audio(request: Request, audio: UploadFile = File(...)):
+    """Analyze uploaded audio file for heart sound and murmur detection."""
+    if not request.session.get("authenticated"):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    valid_extensions = {'.wav', '.mp3', '.ogg', '.flac'}
+    file_ext = Path(audio.filename).suffix.lower() if audio.filename else ''
+    
+    if file_ext not in valid_extensions:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error": f"Invalid file type. Supported formats: {', '.join(valid_extensions)}"
+            }
+        )
+    
+    try:
+        from predictor import predictor
+        audio_bytes = await audio.read()
+        result = predictor.predict(audio_bytes)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+

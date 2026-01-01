@@ -20,7 +20,6 @@
     const reportTimestamp = document.getElementById('report-timestamp');
     const audioPlayer = document.getElementById('audio-player');
     const audioFilename = document.getElementById('audio-filename');
-    const spectrogramResult = document.getElementById('spectrogram-result');
     const heartSoundResult = document.getElementById('heart-sound-result');
     const heartSoundValue = document.getElementById('heart-sound-value');
     const heartSoundBadge = document.getElementById('heart-sound-badge');
@@ -35,6 +34,7 @@
 
     let selectedFile = null;
     let audioUrl = null;
+    let analysisResult = null;
 
     function switchScreen(screen) {
         [uploadScreen, processingScreen, reportScreen].forEach(s => {
@@ -73,6 +73,7 @@
         filePreview.classList.remove('visible');
         uploadZone.style.display = 'block';
         analyzeBtn.disabled = true;
+        analysisResult = null;
 
         if (audioUrl) {
             URL.revokeObjectURL(audioUrl);
@@ -123,67 +124,80 @@
 
     function startAnalysis() {
         switchScreen(processingScreen);
-
         progressBar.style.width = '0%';
         spectrogramPreview.classList.remove('visible');
 
-        simulateAnalysis();
+        runAnalysis();
     }
 
-    function simulateAnalysis() {
-        const steps = [
-            { progress: 15, title: 'Analyzing Audio...', status: 'Preparing your file for analysis', duration: 800 },
-            { progress: 35, title: 'Processing...', status: 'Extracting audio features', duration: 1000 },
-            { progress: 55, title: 'Creating Spectrogram...', status: 'Generating visual representation', duration: 1200 },
-            { progress: 75, title: 'Spectrogram Ready', status: 'Running AI detection model', duration: 800, showSpectrogram: true },
-            { progress: 90, title: 'Almost Done...', status: 'Finalizing detection results', duration: 600 },
-            { progress: 100, title: 'Analysis Complete', status: 'Preparing your report', duration: 500 }
-        ];
+    async function runAnalysis() {
+        updateProgress(10, 'Uploading Audio...', 'Sending file to server');
 
-        let stepIndex = 0;
+        const formData = new FormData();
+        formData.append('audio', selectedFile);
 
-        function runStep() {
-            if (stepIndex >= steps.length) {
-                setTimeout(() => {
-                    showReport();
-                }, 500);
-                return;
+        try {
+            updateProgress(25, 'Processing...', 'Server is processing your audio');
+
+            const progressInterval = setInterval(() => {
+                const currentWidth = parseFloat(progressBar.style.width) || 25;
+                if (currentWidth < 85) {
+                    const newWidth = currentWidth + Math.random() * 5;
+                    progressBar.style.width = newWidth + '%';
+                }
+            }, 2000);
+
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            clearInterval(progressInterval);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Analysis failed');
             }
 
-            const step = steps[stepIndex];
-            progressBar.style.width = step.progress + '%';
-            processingTitle.textContent = step.title;
-            processingStatus.textContent = step.status;
+            const result = await response.json();
 
-            if (step.showSpectrogram) {
+            if (!result.success) {
+                throw new Error(result.error || 'Analysis failed');
+            }
+
+            analysisResult = result;
+
+            updateProgress(90, 'Processing Complete', 'Generating spectrogram display');
+
+            if (result.spectrogram) {
                 spectrogramPreview.classList.add('visible');
-                spectrogramImage.innerHTML = `
-                    <div style="width: 100%; height: 150px; background: linear-gradient(180deg, 
-                        rgba(45, 106, 79, 0.8) 0%, 
-                        rgba(64, 145, 108, 0.6) 25%, 
-                        rgba(149, 213, 178, 0.4) 50%, 
-                        rgba(45, 106, 79, 0.6) 75%, 
-                        rgba(27, 67, 50, 0.8) 100%); 
-                        border-radius: 8px;
-                        position: relative;
-                        overflow: hidden;">
-                        <div style="position: absolute; inset: 0; 
-                            background: repeating-linear-gradient(90deg, 
-                                transparent 0px, transparent 2px, 
-                                rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px);
-                            animation: spectrogramScroll 2s linear infinite;"></div>
-                    </div>
-                `;
+                spectrogramImage.innerHTML = `<img src="${result.spectrogram}" alt="Spectrogram" style="width: 100%; height: auto; border-radius: 8px;">`;
             }
 
-            stepIndex++;
-            setTimeout(runStep, step.duration);
-        }
+            await new Promise(resolve => setTimeout(resolve, 500));
+            updateProgress(100, 'Analysis Complete', 'Preparing your report');
 
-        runStep();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            showReport(result);
+
+        } catch (error) {
+            console.error('Analysis error:', error);
+            showError(error.message || 'An error occurred during analysis');
+        }
     }
 
-    function showReport() {
+    function updateProgress(percent, title, status) {
+        progressBar.style.width = percent + '%';
+        processingTitle.textContent = title;
+        processingStatus.textContent = status;
+    }
+
+    function showError(message) {
+        switchScreen(uploadScreen);
+        alert('Analysis Error: ' + message);
+    }
+
+    function showReport(result) {
         switchScreen(reportScreen);
 
         const now = new Date();
@@ -194,42 +208,30 @@
         }
         audioFilename.textContent = selectedFile ? selectedFile.name : 'Unknown file';
 
-        const spectrogramGradient = `
-            <div style="width: 100%; height: 200px; background: linear-gradient(180deg, 
-                rgba(45, 106, 79, 0.9) 0%, 
-                rgba(64, 145, 108, 0.7) 20%, 
-                rgba(149, 213, 178, 0.5) 40%, 
-                rgba(64, 145, 108, 0.6) 60%, 
-                rgba(45, 106, 79, 0.7) 80%, 
-                rgba(27, 67, 50, 0.9) 100%); 
-                border-radius: 8px;
-                position: relative;">
-                <div style="position: absolute; inset: 0; 
-                    background: repeating-linear-gradient(90deg, 
-                        transparent 0px, transparent 3px, 
-                        rgba(255,255,255,0.08) 3px, rgba(255,255,255,0.08) 6px);"></div>
-            </div>
-        `;
-        document.getElementById('report-spectrogram').innerHTML = spectrogramGradient;
+        if (result.spectrogram) {
+            document.getElementById('report-spectrogram').innerHTML =
+                `<img src="${result.spectrogram}" alt="Spectrogram" style="width: 100%; height: auto; border-radius: 8px;">`;
+        }
 
-        const mockResults = {
-            heartSoundDetected: true,
-            murmurDetected: Math.random() > 0.5,
-            bpm: Math.floor(Math.random() * 40) + 60
-        };
+        const heartSoundDetected = result.prediction.heart_sound_present;
+        const heartSoundConfidence = Math.round(result.confidence.heart_sound * 100);
 
-        heartSoundValue.textContent = mockResults.heartSoundDetected ? 'Detected' : 'Not Detected';
-        heartSoundBadge.textContent = mockResults.heartSoundDetected ? 'Present' : 'Absent';
-        heartSoundBadge.className = 'result-badge ' + (mockResults.heartSoundDetected ? 'detected' : 'not-detected');
-        heartSoundResult.className = 'result-card ' + (mockResults.heartSoundDetected ? 'positive' : '');
+        heartSoundValue.textContent = heartSoundDetected ? 'Detected' : 'Not Detected';
+        heartSoundBadge.textContent = `${heartSoundConfidence}%`;
+        heartSoundBadge.className = 'result-badge ' + (heartSoundDetected ? 'detected' : 'not-detected');
+        heartSoundResult.className = 'result-card ' + (heartSoundDetected ? 'positive' : '');
 
-        murmurValue.textContent = mockResults.murmurDetected ? 'Detected' : 'Not Detected';
-        murmurBadge.textContent = mockResults.murmurDetected ? 'Warning' : 'Normal';
-        murmurBadge.className = 'result-badge ' + (mockResults.murmurDetected ? 'warning' : 'detected');
-        murmurResult.className = 'result-card ' + (mockResults.murmurDetected ? 'negative' : 'positive');
+        const murmurDetected = result.prediction.murmur_present;
+        const murmurConfidence = Math.round(result.confidence.murmur * 100);
 
-        bpmValue.textContent = mockResults.bpm + ' BPM';
-        const bpmStatus = mockResults.bpm < 60 ? 'low' : (mockResults.bpm > 100 ? 'high' : 'normal');
+        murmurValue.textContent = murmurDetected ? 'Detected' : 'Not Detected';
+        murmurBadge.textContent = murmurDetected ? 'Warning' : 'Normal';
+        murmurBadge.className = 'result-badge ' + (murmurDetected ? 'warning' : 'detected');
+        murmurResult.className = 'result-card ' + (murmurDetected ? 'negative' : 'positive');
+
+        const bpm = result.bpm || 72;
+        bpmValue.textContent = `${bpm} BPM`;
+        const bpmStatus = bpm < 60 ? 'low' : (bpm > 100 ? 'high' : 'normal');
         bpmBadge.textContent = bpmStatus.charAt(0).toUpperCase() + bpmStatus.slice(1);
         bpmBadge.className = 'result-badge ' + (bpmStatus === 'normal' ? 'detected' : 'warning');
         bpmResult.className = 'result-card ' + (bpmStatus === 'normal' ? 'positive' : '');
@@ -241,7 +243,29 @@
     });
 
     downloadReportBtn.addEventListener('click', () => {
-        alert('Report download will be available once connected to backend.');
+        if (!analysisResult) {
+            alert('No analysis result to download.');
+            return;
+        }
+
+        const reportData = {
+            timestamp: new Date().toISOString(),
+            filename: selectedFile ? selectedFile.name : 'unknown',
+            prediction: analysisResult.prediction,
+            confidence: analysisResult.confidence,
+            bpm: analysisResult.bpm,
+            inference_time_ms: analysisResult.inference_time_ms
+        };
+
+        const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `heart-analysis-report-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     });
 
     const style = document.createElement('style');
