@@ -28,7 +28,10 @@ class ASTHeartClassifier(nn.Module):
     ):
         super().__init__()
         
-        self.ast = ASTModel.from_pretrained(pretrained_model)
+        self.ast = ASTModel.from_pretrained(
+            pretrained_model,
+            low_cpu_mem_usage=True
+        )
         
         if freeze_encoder:
             for param in self.ast.parameters():

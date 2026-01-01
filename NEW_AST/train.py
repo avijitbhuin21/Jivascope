@@ -24,16 +24,6 @@ from common.trainer import Trainer
 
 GPU_PROFILES = {
     'l4': {
-        'batch_size': 16,
-        'num_workers': 4,
-        'learning_rate': 0.00005,
-        'epochs': 50,
-        'early_stopping_patience': 10,
-        'gradient_clip': 1.0,
-        'weight_decay': 0.01,
-        'scheduler': 'cosine'
-    },
-    't4': {
         'batch_size': 8,
         'num_workers': 2,
         'learning_rate': 0.00005,
@@ -43,8 +33,28 @@ GPU_PROFILES = {
         'weight_decay': 0.01,
         'scheduler': 'cosine'
     },
-    'cpu': {
+    't4': {
         'batch_size': 4,
+        'num_workers': 2,
+        'learning_rate': 0.00005,
+        'epochs': 50,
+        'early_stopping_patience': 10,
+        'gradient_clip': 1.0,
+        'weight_decay': 0.01,
+        'scheduler': 'cosine'
+    },
+    'low_mem': {
+        'batch_size': 2,
+        'num_workers': 0,
+        'learning_rate': 0.00003,
+        'epochs': 50,
+        'early_stopping_patience': 10,
+        'gradient_clip': 1.0,
+        'weight_decay': 0.01,
+        'scheduler': 'cosine'
+    },
+    'cpu': {
+        'batch_size': 2,
         'num_workers': 0,
         'learning_rate': 0.00003,
         'epochs': 30,
@@ -101,7 +111,7 @@ def print_system_info():
 
 def main():
     parser = argparse.ArgumentParser(description='Train AST Heart Classifier')
-    parser.add_argument('--profile', type=str, choices=['l4', 't4', 'cpu'],
+    parser.add_argument('--profile', type=str, choices=['l4', 't4', 'low_mem', 'cpu'],
                        help='Hardware profile (auto-detected if not specified)')
     parser.add_argument('--epochs', type=int, help='Number of epochs')
     parser.add_argument('--batch-size', type=int, help='Batch size')
