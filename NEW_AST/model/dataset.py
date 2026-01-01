@@ -22,6 +22,7 @@ AST_TARGET_DURATION = 10.0
 AST_N_MELS = 128
 AST_N_FFT = 400
 AST_HOP_LENGTH = 160
+AST_MAX_LENGTH = 1214
 
 
 def extract_ast_features(
@@ -29,7 +30,8 @@ def extract_ast_features(
     sr: int = AST_SAMPLE_RATE,
     n_mels: int = AST_N_MELS,
     n_fft: int = AST_N_FFT,
-    hop_length: int = AST_HOP_LENGTH
+    hop_length: int = AST_HOP_LENGTH,
+    max_length: int = AST_MAX_LENGTH
 ) -> torch.Tensor:
     """
     Extract log-mel spectrogram features for AST model.
@@ -40,9 +42,10 @@ def extract_ast_features(
         n_mels: Number of mel bins (128 for AST)
         n_fft: FFT window size
         hop_length: Hop length for STFT
+        max_length: Target time steps to match pretrained model (1214 for MIT AST)
     
     Returns:
-        Log-mel spectrogram tensor of shape (time_steps, n_mels)
+        Log-mel spectrogram tensor of shape (max_length, n_mels)
     """
     mel_spec = librosa.feature.melspectrogram(
         y=audio,
@@ -55,9 +58,15 @@ def extract_ast_features(
     )
     
     log_mel = librosa.power_to_db(mel_spec, ref=np.max)
-    
     log_mel = (log_mel - log_mel.mean()) / (log_mel.std() + 1e-8)
     log_mel = log_mel.T
+    
+    current_length = log_mel.shape[0]
+    if current_length < max_length:
+        padding = np.zeros((max_length - current_length, n_mels))
+        log_mel = np.vstack([log_mel, padding])
+    elif current_length > max_length:
+        log_mel = log_mel[:max_length, :]
     
     return torch.tensor(log_mel, dtype=torch.float32)
 
