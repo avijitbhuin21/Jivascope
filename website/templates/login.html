@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Jivascope - Sign in to access your dashboard">
+    <title>Sign In | Jivascope</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div id="shader-canvas"></div>
+    <div class="blur-overlay"></div>
+
+    <div class="page-wrapper">
+        <div class="login-container">
+            <div class="login-card glass-card">
+                <div class="login-header">
+                    <div class="logo">
+                        Jiva<span class="logo-accent">scope</span>
+                    </div>
+                    <p class="login-subtitle">Welcome back. Please sign in to continue.</p>
+                </div>
+
+                {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <form action="/login" method="POST">
+                    <div class="form-group">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" id="username" name="username" class="form-input"
+                            placeholder="Enter your username" autocomplete="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" id="password" name="password" class="form-input"
+                            placeholder="Enter your password" autocomplete="current-password" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        Sign In
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/static/smoke-shader.js"></script>
+</body>
+
+</html>
