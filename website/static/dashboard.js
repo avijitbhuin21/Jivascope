@@ -14,8 +14,9 @@
     const processingTitle = document.getElementById('processing-title');
     const processingStatus = document.getElementById('processing-status');
     const progressBar = document.getElementById('progress-bar');
-    const spectrogramPreview = document.getElementById('spectrogram-preview');
+    const visualizationsPreview = document.getElementById('visualizations-preview');
     const spectrogramImage = document.getElementById('spectrogram-image');
+    const waveformImage = document.getElementById('waveform-image');
 
     const reportTimestamp = document.getElementById('report-timestamp');
     const audioPlayer = document.getElementById('audio-player');
@@ -46,12 +47,11 @@
     function handleFile(file) {
         if (!file) return;
 
-        const validTypes = ['audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/flac', 'audio/x-wav'];
-        const validExtensions = ['.wav', '.mp3', '.ogg', '.flac'];
+        const validTypes = ['audio/wav', 'audio/x-wav'];
         const fileExt = '.' + file.name.split('.').pop().toLowerCase();
 
-        if (!validTypes.includes(file.type) && !validExtensions.includes(fileExt)) {
-            alert('Please upload a valid audio file (WAV, MP3, OGG, or FLAC)');
+        if (!validTypes.includes(file.type) && fileExt !== '.wav') {
+            alert('Unsupported format. Please upload a WAV file only.\n\nThis application currently only supports WAV audio format.');
             return;
         }
 
@@ -125,7 +125,7 @@
     function startAnalysis() {
         switchScreen(processingScreen);
         progressBar.style.width = '0%';
-        spectrogramPreview.classList.remove('visible');
+        visualizationsPreview.classList.remove('visible');
 
         runAnalysis();
     }
@@ -167,11 +167,16 @@
 
             analysisResult = result;
 
-            updateProgress(90, 'Processing Complete', 'Generating spectrogram display');
+            updateProgress(90, 'Processing Complete', 'Generating visualizations');
 
-            if (result.spectrogram) {
-                spectrogramPreview.classList.add('visible');
-                spectrogramImage.innerHTML = `<img src="${result.spectrogram}" alt="Spectrogram" style="width: 100%; height: auto; border-radius: 8px;">`;
+            if (result.spectrogram || result.waveform) {
+                visualizationsPreview.classList.add('visible');
+                if (result.waveform) {
+                    waveformImage.innerHTML = `<img src="${result.waveform}" alt="Waveform" style="width: 100%; height: auto; border-radius: 8px;">`;
+                }
+                if (result.spectrogram) {
+                    spectrogramImage.innerHTML = `<img src="${result.spectrogram}" alt="Spectrogram" style="width: 100%; height: auto; border-radius: 8px;">`;
+                }
             }
 
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -207,6 +212,11 @@
             audioPlayer.src = audioUrl;
         }
         audioFilename.textContent = selectedFile ? selectedFile.name : 'Unknown file';
+
+        if (result.waveform) {
+            document.getElementById('report-waveform').innerHTML =
+                `<img src="${result.waveform}" alt="Waveform" style="width: 100%; height: auto; border-radius: 8px;">`;
+        }
 
         if (result.spectrogram) {
             document.getElementById('report-spectrogram').innerHTML =

@@ -54,8 +54,8 @@
                             </svg>
                             Browse Files
                         </button>
-                        <input type="file" id="file-input" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden>
-                        <p class="upload-hint">Supported formats: WAV, MP3, OGG, FLAC</p>
+                        <input type="file" id="file-input" accept="audio/wav,.wav,audio/x-wav" hidden>
+                        <p class="upload-hint">Supported format: WAV only</p>
                     </div>
 
                     <div class="file-preview" id="file-preview">
@@ -107,11 +107,21 @@
                         <div class="progress-bar" id="progress-bar"></div>
                     </div>
 
-                    <div class="spectrogram-preview" id="spectrogram-preview">
-                        <h3 class="spectrogram-label">Spectrogram</h3>
-                        <div class="spectrogram-image" id="spectrogram-image">
-                            <div class="spectrogram-placeholder">
-                                <div class="spectrogram-loading"></div>
+                    <div class="visualizations-preview" id="visualizations-preview">
+                        <div class="visualization-item">
+                            <h3 class="spectrogram-label">Audio Waveform</h3>
+                            <div class="waveform-image" id="waveform-image">
+                                <div class="spectrogram-placeholder">
+                                    <div class="spectrogram-loading"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="visualization-item">
+                            <h3 class="spectrogram-label">Mel Spectrogram</h3>
+                            <div class="spectrogram-image" id="spectrogram-image">
+                                <div class="spectrogram-placeholder">
+                                    <div class="spectrogram-loading"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -134,8 +144,15 @@
                             <p class="audio-filename" id="audio-filename">--</p>
                         </div>
 
+                        <div class="report-section waveform-section">
+                            <h3 class="report-section-title">Audio Waveform</h3>
+                            <div class="report-waveform" id="report-waveform">
+                                <img src="" alt="Waveform" id="waveform-result">
+                            </div>
+                        </div>
+
                         <div class="report-section spectrogram-section">
-                            <h3 class="report-section-title">Spectrogram Analysis</h3>
+                            <h3 class="report-section-title">Mel Spectrogram</h3>
                             <div class="report-spectrogram" id="report-spectrogram">
                                 <img src="" alt="Spectrogram" id="spectrogram-result">
                             </div>

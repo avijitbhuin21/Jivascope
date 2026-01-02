@@ -601,14 +601,39 @@ h3 {
     transition: width 0.3s ease;
 }
 
-.spectrogram-preview {
+.spectrogram-preview,
+.visualizations-preview {
     display: none;
     text-align: left;
 }
 
-.spectrogram-preview.visible {
+.spectrogram-preview.visible,
+.visualizations-preview.visible {
     display: block;
     animation: fadeInUp 0.5s ease;
+}
+
+.visualization-item {
+    margin-bottom: 1.5rem;
+}
+
+.visualization-item:last-child {
+    margin-bottom: 0;
+}
+
+.waveform-image {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.waveform-image img {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
 }
 
 .spectrogram-label {
@@ -717,6 +742,18 @@ h3 {
 }
 
 .report-spectrogram img {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+}
+
+.report-waveform {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+}
+
+.report-waveform img {
     max-width: 100%;
     border-radius: var(--radius-sm);
 }

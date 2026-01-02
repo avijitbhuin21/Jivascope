@@ -259,6 +259,41 @@ def generate_spectrogram_image(audio: np.ndarray, sr: int) -> str:
     return f"data:image/png;base64,{img_base64}"
 
 
+def generate_waveform_image(audio: np.ndarray, sr: int) -> str:
+    fig, ax = plt.subplots(figsize=(10, 3))
+    fig.patch.set_facecolor('#1a1a2e')
+    ax.set_facecolor('#1a1a2e')
+    
+    time_axis = np.linspace(0, len(audio) / sr, len(audio))
+    
+    ax.plot(time_axis, audio, color='#4ade80', linewidth=0.5, alpha=0.8)
+    ax.fill_between(time_axis, audio, alpha=0.3, color='#4ade80')
+    
+    ax.set_title('Audio Waveform', color='white', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Time (s)', color='white')
+    ax.set_ylabel('Amplitude', color='white')
+    ax.tick_params(axis='both', colors='white')
+    ax.set_xlim(0, len(audio) / sr)
+    
+    max_amp = np.max(np.abs(audio)) * 1.1
+    ax.set_ylim(-max_amp, max_amp)
+    
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#333')
+    
+    ax.axhline(y=0, color='#555', linewidth=0.5, linestyle='--')
+    
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=100, bbox_inches='tight', facecolor='#1a1a2e')
+    plt.close(fig)
+    buf.seek(0)
+    
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    return f"data:image/png;base64,{img_base64}"
+
+
 def estimate_bpm(audio: np.ndarray, sr: int) -> int:
     try:
         analytic_signal = hilbert(audio)
@@ -360,6 +395,7 @@ class HeartSoundPredictor:
             features = features.to(self.device)
             
             spectrogram_image = generate_spectrogram_image(audio_for_spec, sr)
+            waveform_image = generate_waveform_image(audio_for_spec, sr)
             
             logits, (attn1, attn2) = self.model(features)
             probs = torch.sigmoid(logits).cpu().numpy()[0]
@@ -380,6 +416,7 @@ class HeartSoundPredictor:
                     "murmur": float(probs[1])
                 },
                 "spectrogram": spectrogram_image,
+                "waveform": waveform_image,
                 "bpm": estimate_bpm(audio_for_spec, sr),
                 "inference_time_ms": round(inference_time, 2)
             }
